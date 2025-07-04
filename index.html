@@ -6,13 +6,19 @@
   <title>MetaryX</title>
 	
    <!-- Favicon dan ikon -->
-  <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
-  <link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png">
-  <link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png">
-  <link rel="manifest" href="manifest.json">
-  <link rel="icon" type="image/x-icon" href="favicon.ico">
+ <link rel="apple-touch-icon" sizes="180x180" href="/meteofis/apple-touch-icon.png">
+ <link rel="icon" type="image/png" sizes="32x32" href="/meteofis/favicon-32x32.png">
+ <link rel="icon" type="image/png" sizes="16x16" href="/meteofis/favicon-16x16.png">
+ <link rel="manifest" href="/meteofis/manifest.json">
+ <link rel="icon" type="image/x-icon" href="/meteofis/favicon.ico">
 
   <!-- Warna tema -->
+  <meta name="theme-color" content="#0d47a1">
+   <!-- Web App Meta -->
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="MetaryX">
+  <meta name="application-name" content="MetaryX">
   <meta name="theme-color" content="#0d47a1">
 	
   <style>
@@ -87,7 +93,7 @@
   </style>
 	 <script>
     if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('service-worker.js')
+      navigator.serviceWorker.register('/meteofis/service-worker.js')
         .then(() => console.log('✅ Service Worker registered'))
         .catch(err => console.error('❌ SW registration failed', err));
     }
@@ -96,7 +102,7 @@
 <body>
   <div class="container">
    <h1 style="display: flex; align-items: center; justify-content: center; gap: 12px; font-size: 2rem;">
-  <img src="android-chrome-512x512.png" alt="Logo" style="width: 2rem; height: 2rem;">
+  <img src="/meteofis/android-chrome-512x512.png" alt="Logo" style="width: 2rem; height: 2rem;">
   MetaryX
 </h1>
     <form id="form">
