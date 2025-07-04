@@ -1,8 +1,9 @@
 const CACHE_NAME = "metaryx-v1";
 const urlsToCache = [
-  "Metaryx3.2.html",
+  "index.html",
   "manifest.json",
-  "icon.png"
+  "icon.png",
+  "service-worker.js"
 ];
 
 self.addEventListener("install", event => {
