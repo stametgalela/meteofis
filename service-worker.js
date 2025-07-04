@@ -9,8 +9,7 @@ const urlsToCache = [
   "/meteofis/favicon-32x32.png",
   "/meteofis/favicon-16x16.png",
   "/meteofis/site.webmanifest",
-  "/meteofis/styles.css", // opsional
-  "/meteofis/app.js"      // opsional
+  "/meteofis/apple-touch-icon.png",
 ];
 
 // Saat install: simpan ke cache
