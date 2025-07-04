@@ -1,4 +1,4 @@
-const CACHE_NAME = 'metaryx-cache-v1';
+const CACHE_NAME = 'metaryx-cache-v2'; // ⚠️ Ganti versi jika ada perubahan
 const OFFLINE_URL = '/meteofis/index.html';
 
 const urlsToCache = [
@@ -10,63 +10,63 @@ const urlsToCache = [
   '/meteofis/favicon-16x16.png',
   '/meteofis/favicon-32x32.png',
   '/meteofis/favicon.ico',
+  '/meteofis/android-chrome-192x192.png',
   '/meteofis/android-chrome-512x512.png'
 ];
 
-// ✅ Install: simpan file ke cache
 self.addEventListener('install', event => {
-  console.log('📦 Service Worker: Installing...');
+  console.log('📦 Installing Service Worker...');
   event.waitUntil(
     caches.open(CACHE_NAME).then(cache => {
-      console.log('📁 Caching app shell');
+      console.log('📁 Caching app shell...');
       return cache.addAll(urlsToCache);
     })
   );
-  self.skipWaiting(); // aktifkan langsung
+  self.skipWaiting();
 });
 
-// ✅ Activate: hapus cache lama jika ada
 self.addEventListener('activate', event => {
-  console.log('✅ Service Worker: Activated');
+  console.log('✅ Activating Service Worker...');
   event.waitUntil(
-    caches.keys().then(cacheNames => {
-      return Promise.all(
-        cacheNames.map(key => {
+    caches.keys().then(keys =>
+      Promise.all(
+        keys.map(key => {
           if (key !== CACHE_NAME) {
-            console.log('🧹 Deleting old cache:', key);
+            console.log('🧹 Removing old cache:', key);
             return caches.delete(key);
           }
         })
-      );
-    })
+      )
+    )
   );
-  self.clients.claim(); // aktifkan untuk semua tab
+  self.clients.claim();
 });
 
-// ✅ Fetch: ambil dari cache dulu, kalau gagal baru dari jaringan
 self.addEventListener('fetch', event => {
   if (event.request.method !== 'GET') return;
 
   event.respondWith(
-    caches.match(event.request).then(response => {
-      if (response) {
-        console.log('✅ [SW] Serving from cache:', event.request.url);
-        return response;
-      }
+    caches.match(event.request).then(cachedResponse => {
+      const fetchPromise = fetch(event.request)
+        .then(networkResponse => {
+          if (networkResponse && networkResponse.status === 200) {
+            caches.open(CACHE_NAME).then(cache => {
+              cache.put(event.request, networkResponse.clone());
+            });
+          }
+          return networkResponse;
+        })
+        .catch(() => {
+          if (
+            !cachedResponse &&
+            event.request.headers.get('accept')?.includes('text/html')
+          ) {
+            return caches.match(OFFLINE_URL);
+          }
+          return cachedResponse || new Response('', { status: 404 });
+        });
 
-      console.log('🌐 [SW] Fetching from network:', event.request.url);
-     return fetch(event.request).catch(() => {
-  if (event.request.headers.get('accept')?.includes('text/html')) {
-    console.warn('⚠️ Offline fallback for:', event.request.url);
-    return caches.match(OFFLINE_URL);
-  }
-
-  // ✅ Fallback aman untuk file non-HTML (misalnya icon.png)
-  return new Response('', {
-    status: 404,
-    statusText: 'Not Found'
-  });
-});
+      return cachedResponse || fetchPromise;
     })
   );
 });
