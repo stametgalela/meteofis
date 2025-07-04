@@ -14,6 +14,7 @@ const urlsToCache = [
   '/meteofis/android-chrome-512x512.png'
 ];
 
+// ✅ Install
 self.addEventListener('install', event => {
   console.log('📦 Installing Service Worker...');
   event.waitUntil(
@@ -25,23 +26,32 @@ self.addEventListener('install', event => {
   self.skipWaiting();
 });
 
+// ✅ Activate
 self.addEventListener('activate', event => {
   console.log('✅ Activating Service Worker...');
   event.waitUntil(
-    caches.keys().then(keys =>
-      Promise.all(
+    (async () => {
+      const keys = await caches.keys();
+      await Promise.all(
         keys.map(key => {
           if (key !== CACHE_NAME) {
             console.log('🧹 Removing old cache:', key);
             return caches.delete(key);
           }
         })
-      )
-    )
+      );
+
+      // 🔄 Kirim pesan ke semua tab aktif
+      const clients = await self.clients.matchAll();
+      clients.forEach(client => {
+        client.postMessage({ type: 'NEW_VERSION_AVAILABLE' });
+      });
+    })()
   );
   self.clients.claim();
 });
 
+// ✅ Fetch
 self.addEventListener('fetch', event => {
   if (event.request.method !== 'GET') return;
 
