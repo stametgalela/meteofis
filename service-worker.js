@@ -55,13 +55,18 @@ self.addEventListener('fetch', event => {
       }
 
       console.log('🌐 [SW] Fetching from network:', event.request.url);
-      return fetch(event.request).catch(() => {
-        // Jika gagal dan permintaan ke HTML → fallback ke index.html
-        if (event.request.headers.get('accept')?.includes('text/html')) {
-          console.warn('⚠️ Offline fallback for:', event.request.url);
-          return caches.match(OFFLINE_URL);
-        }
-      });
+     return fetch(event.request).catch(() => {
+  if (event.request.headers.get('accept')?.includes('text/html')) {
+    console.warn('⚠️ Offline fallback for:', event.request.url);
+    return caches.match(OFFLINE_URL);
+  }
+
+  // ✅ Fallback aman untuk file non-HTML (misalnya icon.png)
+  return new Response('', {
+    status: 404,
+    statusText: 'Not Found'
+  });
+});
     })
   );
 });
