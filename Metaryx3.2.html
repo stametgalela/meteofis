@@ -1,0 +1,323 @@
+from pathlib import Path
+import zipfile
+
+# Siapkan struktur folder
+project_dir = Path("/mnt/data/metaryx-pwa")
+project_dir.mkdir(parents=True, exist_ok=True)
+
+# File 1: Metaryx3.2.html (HTML lengkap dengan PWA support)
+html_content = '''<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Pengamatan Meteorologi</title>
+  <link rel="manifest" href="manifest.json">
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('service-worker.js')
+        .then(() => console.log('✅ Service Worker registered'))
+        .catch(err => console.error('❌ Service Worker registration failed:', err));
+    }
+  </script>
+  <style>
+    body {
+      font-family: sans-serif;
+      margin: 0;
+      padding: 0;
+      background: #f0f2f5;
+    }
+    .container {
+      max-width: 600px;
+      margin: auto;
+      background: white;
+      padding: 20px;
+      box-shadow: 0 0 10px #ccc;
+      border-radius: 8px;
+      margin-top: 20px;
+    }
+    h1, h2 {
+      text-align: center;
+    }
+    .form-group {
+      margin-bottom: 15px;
+    }
+    label {
+      display: block;
+      margin-bottom: 5px;
+      font-weight: bold;
+    }
+    input {
+      width: 100%;
+      padding: 8px;
+      font-size: 1em;
+      box-sizing: border-box;
+    }
+    button {
+      padding: 10px 15px;
+      margin: 5px 5px 10px 0;
+      font-size: 1em;
+      cursor: pointer;
+    }
+    #output {
+      margin-top: 20px;
+      background: #eef;
+      padding: 15px;
+      border-radius: 6px;
+    }
+    #qffTable {
+      margin-top: 10px;
+      border-collapse: collapse;
+      width: 100%;
+    }
+    #qffTable th, #qffTable td {
+      border: 1px solid #999;
+      padding: 8px;
+      text-align: center;
+    }
+    #searchInput {
+      margin: 10px 0;
+      width: 100%;
+      padding: 8px;
+      font-size: 1em;
+      box-sizing: border-box;
+    }
+    .riwayat {
+      background: #f9f9f9;
+      border: 1px solid #ddd;
+      padding: 10px;
+      margin-top: 20px;
+      border-radius: 6px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🛰️ Pengamatan Meteorologi</h1>
+    <form id="form">
+      <div class="form-group">
+        <label for="dry">🌡️ Suhu Bola Kering (°C):</label>
+        <input type="number" id="dry" step="0.1" required />
+      </div>
+      <div class="form-group">
+        <label for="wet">🌡️ Suhu Bola Basah (°C):</label>
+        <input type="number" id="wet" step="0.1" required />
+      </div>
+      <div class="form-group">
+        <label for="press">🧭 Tekanan Udara (mb):</label>
+        <input type="number" id="press" step="0.1" required />
+      </div>
+      <div class="form-group">
+        <label for="windDir">🌬️ Arah Angin (°):</label>
+        <input type="number" id="windDir" step="1" required />
+      </div>
+      <div class="form-group">
+        <label for="windSpeed">💨 Kecepatan Angin (knot):</label>
+        <input type="number" id="windSpeed" step="0.1" required />
+      </div>
+      <button type="submit">🔍 Hitung</button>
+      <button type="button" onclick="clearForm()">🧹 Clear</button>
+      <button type="button" onclick="toggleTable()">📋 Tabel QFF</button>
+      <button type="button" onclick="simpan()">💾 Simpan</button>
+      <button type="button" onclick="kirimWhatsApp()">📲 Kirim WhatsApp</button>
+    </form>
+
+    <div id="output"></div>
+
+    <div id="qffContainer" style="display:none;">
+      <input type="text" id="searchInput" onkeyup="filterTable()" placeholder="🔎 Cari QFF...">
+      <table id="qffTable">
+        <thead>
+          <tr><th>Tekanan (mb)</th><th>QFF (mb)</th></tr>
+        </thead>
+        <tbody id="qffBody"></tbody>
+      </table>
+    </div>
+
+    <div class="riwayat">
+      <h3>📂 Riwayat Pengamatan</h3>
+      <div id="riwayatList"></div>
+      <button onclick="hapusRiwayat()">🗑️ Hapus Semua</button>
+    </div>
+  </div>
+
+  <script>
+    function calculate() {
+      const dry = parseFloat(document.getElementById("dry").value);
+      const wet = parseFloat(document.getElementById("wet").value);
+      const press = parseFloat(document.getElementById("press").value);
+      const windDir = parseInt(document.getElementById("windDir").value);
+      const windSpeed = parseFloat(document.getElementById("windSpeed").value);
+      const elev = 37;
+
+      if (isNaN(dry) || isNaN(wet) || isNaN(press) || isNaN(windDir) || isNaN(windSpeed)) {
+        alert("Mohon isi semua kolom dengan benar.");
+        return;
+      }
+
+      const eWet = 6.112 * Math.exp((17.62 * wet) / (243.12 + wet));
+      const eDry = 6.112 * Math.exp((17.62 * dry) / (243.12 + dry));
+      const e = eWet - press * (dry - wet) * 0.00066 * (1 + 0.00115 * wet);
+      const rh = Math.round((e / eDry) * 100);
+      const tDew = (243.12 * Math.log(e / 6.112)) / (17.62 - Math.log(e / 6.112));
+
+      const T = dry + 273.15;
+      const QFF = press + (0.12 * elev) + (0.0005 * T);
+      const QFE = press + 0.5;
+
+      const windDirText = getWindDirection(windDir);
+      const speedKMH = (windSpeed * 1.852).toFixed(1);
+
+      const now = new Date();
+      const local = now.toLocaleString("sv-SE");
+      const utc = new Date(now.getTime() - (9 * 60 * 60 * 1000)).toLocaleString("sv-SE") + " UTC";
+
+      const output = `
+        <h2>🕓 Waktu Pengamatan:</h2>
+        <p>Lokal: ${local}<br/>UTC: ${utc}</p>
+        <p>🌡️ Bola Kering: ${dry.toFixed(1)} °C<br/>
+        🌡️ Bola Basah: ${wet.toFixed(1)} °C<br/>
+        🌡️ Titik Embun: ${tDew.toFixed(1)} °C<br/>
+        💧 Kelembapan Relatif: ${rh} %</p>
+        <p>🧭 Tekanan Udara: ${press.toFixed(1)} mb<br/>
+        📈 QFF: ${QFF.toFixed(1)} mb / ${(QFF * 0.02953).toFixed(2)} inchHg<br/>
+        📉 QFE: ${QFE.toFixed(1)} mb / ${(QFE * 0.02953).toFixed(2)} inchHg</p>
+        <p>🌬️ Arah Angin: ${windDir}° (${windDirText})<br/>
+        💨 Kecepatan: ${Math.round(windSpeed)} knot (${speedKMH} km/jam)</p>
+      `;
+      document.getElementById("output").innerHTML = output;
+    }
+
+    function simpan() {
+      const data = document.getElementById("output").innerHTML;
+      if (!data) return;
+      let riwayat = JSON.parse(localStorage.getItem("riwayat") || "[]");
+      riwayat.push(data);
+      localStorage.setItem("riwayat", JSON.stringify(riwayat));
+      tampilkanRiwayat();
+    }
+
+    function kirimWhatsApp() {
+      const outputText = document.getElementById("output").innerText;
+      if (!outputText) {
+        alert("Silakan hitung data terlebih dahulu.");
+        return;
+      }
+      const pesan = encodeURIComponent(outputText);
+      const url = `https://wa.me/?text=${pesan}`;
+      window.open(url, "_blank");
+    }
+
+    function tampilkanRiwayat() {
+      let riwayat = JSON.parse(localStorage.getItem("riwayat") || "[]");
+      document.getElementById("riwayatList").innerHTML = riwayat.map(item => `<div style="border-bottom:1px solid #ccc;margin-bottom:10px;">${item}</div>`).join("");
+    }
+
+    function hapusRiwayat() {
+      if (confirm("Hapus semua riwayat pengamatan?")) {
+        localStorage.removeItem("riwayat");
+        tampilkanRiwayat();
+      }
+    }
+
+    function clearForm() {
+      document.getElementById("form").reset();
+      document.getElementById("output").innerHTML = "";
+    }
+
+    function getWindDirection(deg) {
+      const directions = ["Utara", "Timur Laut", "Timur", "Tenggara", "Selatan", "Barat Daya", "Barat", "Barat Laut"];
+      const i = Math.floor((deg + 22.5) / 45) % 8;
+      return directions[i];
+    }
+
+    function toggleTable() {
+      const container = document.getElementById("qffContainer");
+      container.style.display = container.style.display === "none" ? "block" : "none";
+    }
+
+    function filterTable() {
+      const input = document.getElementById("searchInput").value.toUpperCase();
+      const tr = document.querySelectorAll("#qffTable tbody tr");
+      tr.forEach(row => {
+        const qffCell = row.getElementsByTagName("td")[1];
+        row.style.display = qffCell.textContent.toUpperCase().indexOf(input) > -1 ? "" : "none";
+      });
+    }
+
+    window.onload = function () {
+      tampilkanRiwayat();
+      const tbody = document.getElementById("qffBody");
+      const elev = 37;
+      for (let p = 995.0; p <= 1015.0; p += 0.1) {
+        const T = 303.15;
+        const qff = p + (0.12 * elev) + (0.0005 * T);
+        const row = `<tr><td>${p.toFixed(1)}</td><td>${qff.toFixed(1)}</td></tr>`;
+        tbody.insertAdjacentHTML("beforeend", row);
+      }
+    };
+
+    document.getElementById("form").addEventListener("submit", function (e) {
+      e.preventDefault();
+      calculate();
+    });
+  </script>
+</body>
+</html>
+'''
+
+# File 2: manifest.json
+manifest_content = '''{
+  "name": "Metaryx 3.2",
+  "short_name": "Metaryx",
+  "start_url": "Metaryx3.2.html",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#0d47a1",
+  "icons": [
+    {
+      "src": "icon.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    }
+  ]
+}
+'''
+
+# File 3: service-worker.js
+sw_content = '''const CACHE_NAME = "metaryx-v1";
+const urlsToCache = [
+  "Metaryx3.2.html",
+  "manifest.json",
+  "icon.png"
+];
+
+self.addEventListener("install", event => {
+  event.waitUntil(
+    caches.open(CACHE_NAME).then(cache => cache.addAll(urlsToCache))
+  );
+});
+
+self.addEventListener("fetch", event => {
+  event.respondWith(
+    caches.match(event.request).then(response => response || fetch(event.request))
+  );
+});
+'''
+
+# Simpan file
+(project_dir / "Metaryx3.2.html").write_text(html_content, encoding="utf-8")
+(project_dir / "manifest.json").write_text(manifest_content, encoding="utf-8")
+(project_dir / "service-worker.js").write_text(sw_content, encoding="utf-8")
+
+# Tambahkan placeholder icon.png
+icon_path = project_dir / "icon.png"
+icon_path.write_bytes(b"")
+
+# Buat ZIP
+zip_path = Path("/mnt/data/Metaryx-PWA-FULL.zip")
+with zipfile.ZipFile(zip_path, "w") as zipf:
+    for file in project_dir.rglob("*"):
+        zipf.write(file, arcname=file.relative_to(project_dir))
+
+zip_path.name

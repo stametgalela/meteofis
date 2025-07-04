@@ -1,0 +1,16 @@
+{
+  "name": "Metaryx 3.2",
+  "short_name": "Metaryx",
+  "start_url": "Metaryx3.2.html",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#0d47a1",
+  "icons": [
+    {
+      "src": "icon.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    }
+  ]
+}
+{'name': 'Pengamatan Meteorologi', 'short_name': 'Metaryx', 'start_url': './Metaryx3.2.html', 'display': 'standalone', 'background_color': '#ffffff', 'theme_color': '#f0f2f5', 'icons': [{'src': 'icon.png', 'sizes': '192x192', 'type': 'image/png'}]}
