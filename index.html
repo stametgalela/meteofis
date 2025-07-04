@@ -74,6 +74,13 @@
       border-radius: 6px;
     }
   </style>
+	 <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('service-worker.js')
+        .then(() => console.log('✅ Service Worker registered'))
+        .catch(err => console.error('❌ SW registration failed', err));
+    }
+  </script>
 </head>
 <body>
   <div class="container">
