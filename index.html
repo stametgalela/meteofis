@@ -1,25 +1,9 @@
-from pathlib import Path
-import zipfile
-
-# Siapkan struktur folder
-project_dir = Path("/mnt/data/metaryx-pwa")
-project_dir.mkdir(parents=True, exist_ok=True)
-
-# File 1: Metaryx3.2.html (HTML lengkap dengan PWA support)
-html_content = '''<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="id">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Pengamatan Meteorologi</title>
-  <link rel="manifest" href="manifest.json">
-  <script>
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('service-worker.js')
-        .then(() => console.log('✅ Service Worker registered'))
-        .catch(err => console.error('❌ Service Worker registration failed:', err));
-    }
-  </script>
   <style>
     body {
       font-family: sans-serif;
@@ -119,7 +103,7 @@ html_content = '''<!DOCTYPE html>
       <button type="button" onclick="clearForm()">🧹 Clear</button>
       <button type="button" onclick="toggleTable()">📋 Tabel QFF</button>
       <button type="button" onclick="simpan()">💾 Simpan</button>
-      <button type="button" onclick="kirimWhatsApp()">📲 Kirim WhatsApp</button>
+	  <button type="button" onclick="kirimWhatsApp()">📲 Kirim WhatsApp</button>
     </form>
 
     <div id="output"></div>
@@ -196,17 +180,18 @@ html_content = '''<!DOCTYPE html>
       localStorage.setItem("riwayat", JSON.stringify(riwayat));
       tampilkanRiwayat();
     }
+	
+	function kirimWhatsApp() {
+	  const outputText = document.getElementById("output").innerText;
+	  if (!outputText) {
+      alert("Silakan hitung data terlebih dahulu.");
+      return;
+	  }
+	  const pesan = encodeURIComponent(outputText);
+	  const url = `https://wa.me/?text=${pesan}`;
+	  window.open(url, "_blank");
+	}
 
-    function kirimWhatsApp() {
-      const outputText = document.getElementById("output").innerText;
-      if (!outputText) {
-        alert("Silakan hitung data terlebih dahulu.");
-        return;
-      }
-      const pesan = encodeURIComponent(outputText);
-      const url = `https://wa.me/?text=${pesan}`;
-      window.open(url, "_blank");
-    }
 
     function tampilkanRiwayat() {
       let riwayat = JSON.parse(localStorage.getItem("riwayat") || "[]");
@@ -264,60 +249,3 @@ html_content = '''<!DOCTYPE html>
   </script>
 </body>
 </html>
-'''
-
-# File 2: manifest.json
-manifest_content = '''{
-  "name": "Metaryx 3.2",
-  "short_name": "Metaryx",
-  "start_url": "Metaryx3.2.html",
-  "display": "standalone",
-  "background_color": "#ffffff",
-  "theme_color": "#0d47a1",
-  "icons": [
-    {
-      "src": "icon.png",
-      "sizes": "192x192",
-      "type": "image/png"
-    }
-  ]
-}
-'''
-
-# File 3: service-worker.js
-sw_content = '''const CACHE_NAME = "metaryx-v1";
-const urlsToCache = [
-  "Metaryx3.2.html",
-  "manifest.json",
-  "icon.png"
-];
-
-self.addEventListener("install", event => {
-  event.waitUntil(
-    caches.open(CACHE_NAME).then(cache => cache.addAll(urlsToCache))
-  );
-});
-
-self.addEventListener("fetch", event => {
-  event.respondWith(
-    caches.match(event.request).then(response => response || fetch(event.request))
-  );
-});
-'''
-
-# Simpan file
-(project_dir / "Metaryx3.2.html").write_text(html_content, encoding="utf-8")
-(project_dir / "manifest.json").write_text(manifest_content, encoding="utf-8")
-(project_dir / "service-worker.js").write_text(sw_content, encoding="utf-8")
-
-# Tambahkan placeholder icon.png
-icon_path = project_dir / "icon.png"
-icon_path.write_bytes(b"")
-
-# Buat ZIP
-zip_path = Path("/mnt/data/Metaryx-PWA-FULL.zip")
-with zipfile.ZipFile(zip_path, "w") as zipf:
-    for file in project_dir.rglob("*"):
-        zipf.write(file, arcname=file.relative_to(project_dir))
-
-zip_path.name
