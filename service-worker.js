@@ -5,43 +5,47 @@ const urlsToCache = [
   "/meteofis/index.html",
   "/meteofis/manifest.json",
   "/meteofis/service-worker.js",
-  "/meteofis/android-chrome-512x512.png", // sesuaikan dengan ikon yang kamu gunakan
-  "/meteofis/favicon-32x32.png",          // opsional
-  "/meteofis/favicon-16x16.png",          // opsional
-  "/meteofis/site.webmanifest",          // opsional
-  "/meteofis/styles.css",                // jika kamu punya file CSS terpisah
-  "/meteofis/app.js"                     // jika script JavaScript kamu dipisah
+  "/meteofis/android-chrome-512x512.png",
+  "/meteofis/favicon-32x32.png",
+  "/meteofis/favicon-16x16.png",
+  "/meteofis/site.webmanifest",
+  "/meteofis/styles.css", // opsional
+  "/meteofis/app.js"      // opsional
 ];
 
-// Install: simpan file ke cache
+// Saat install: simpan ke cache
 self.addEventListener("install", event => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then(cache => {
-      return cache.addAll(urlsToCache);
-    })
+    caches.open(CACHE_NAME).then(cache => cache.addAll(urlsToCache))
   );
-  self.skipWaiting(); // Langsung aktif tanpa nunggu tab ditutup
+  self.skipWaiting(); // aktifkan SW segera
 });
 
-// Activate: hapus cache lama
+// Saat activate: bersihkan cache lama
 self.addEventListener("activate", event => {
   event.waitUntil(
-    caches.keys().then(cacheNames => {
-      return Promise.all(
-        cacheNames
-          .filter(name => name !== CACHE_NAME)
-          .map(name => caches.delete(name))
-      );
-    })
+    caches.keys().then(keys => 
+      Promise.all(keys.map(key => {
+        if (key !== CACHE_NAME) return caches.delete(key);
+      }))
+    )
   );
-  self.clients.claim(); // Ambil alih semua halaman
+  self.clients.claim(); // ambil kendali langsung
 });
 
-// Fetch: ambil dari cache dulu, kalau tidak ada ambil dari jaringan
+// Saat fetch: ambil dari cache, fallback ke index jika offline
 self.addEventListener("fetch", event => {
   event.respondWith(
     caches.match(event.request).then(response => {
-      return response || fetch(event.request);
-    }).catch(() => caches.match("/meteofis/index.html")) // fallback saat offline
+      // jika ada di cache, pakai
+      if (response) return response;
+      // jika tidak, ambil dari jaringan
+      return fetch(event.request).catch(() => {
+        // fallback saat offline
+        if (event.request.mode === 'navigate') {
+          return caches.match("/meteofis/index.html");
+        }
+      });
+    })
   );
 });
