@@ -88,6 +88,43 @@
       font-size: 1em;
       box-sizing: border-box;
     }
+	.collapsible {
+  background-color: #e3f2fd;
+  color: #0d47a1;
+  cursor: pointer;
+  padding: 10px;
+  width: 100%;
+  border: none;
+  text-align: left;
+  outline: none;
+  font-size: 1.1em;
+  margin-top: 10px;
+  border-radius: 6px;
+}
+
+.active, .collapsible:hover {
+  background-color: #bbdefb;
+}
+
+.collapsible:after {
+  content: '▼';
+  float: right;
+  margin-left: 5px;
+}
+
+.active:after {
+  content: '▲';
+}
+
+.collapsible-content {
+  padding: 0 10px;
+  display: none;
+  overflow: hidden;
+  background-color: #f9f9f9;
+  border-left: 4px solid #0d47a1;
+  margin-bottom: 10px;
+  border-radius: 6px;
+}
     .riwayat {
       background: #f9f9f9;
       border: 1px solid #ddd;
@@ -95,6 +132,11 @@
       margin-top: 20px;
       border-radius: 6px;
     }
+
+	#metarOutputWrapper button:hover {
+  background-color: #ddd;
+}
+
   </style>
 	<script>
   if ('serviceWorker' in navigator) {
@@ -129,6 +171,208 @@
       })
       .catch(err => console.error('❌ SW registration failed', err));
   }
+  function pad2(n) {
+  return n < 10 ? '0' + n : n;
+}
+
+function getUTCMetarTime() {
+  const jamInput = parseInt(document.getElementById("jam").value);
+  const menitInput = parseInt(document.getElementById("menit").value);
+
+  let utcTime;
+  const now = new Date();
+
+  // Jika input valid, gunakan input
+  if (!isNaN(jamInput) && !isNaN(menitInput) &&
+      jamInput >= 0 && jamInput <= 23 &&
+      menitInput >= 0 && menitInput <= 59) {
+    utcTime = new Date(Date.UTC(
+      now.getUTCFullYear(),
+      now.getUTCMonth(),
+      now.getUTCDate(),
+      jamInput,
+      menitInput
+    ));
+  } else {
+    // Jika tidak valid, pakai waktu sekarang
+    utcTime = new Date();
+  }
+
+  // Bulatkan menit ke bawah/atas sesuai ketentuan METAR
+  const minute = utcTime.getUTCMinutes();
+  if (minute >= 45) {
+    utcTime.setUTCMinutes(0);
+    utcTime.setUTCHours(utcTime.getUTCHours() + 1);
+  } else {
+    utcTime.setUTCMinutes(0);
+  }
+
+  const dd = utcTime.getUTCDate();
+  const hh = utcTime.getUTCHours();
+  const mm = utcTime.getUTCMinutes();
+
+  return `${pad2(dd)}${pad2(hh)}${pad2(mm)}Z`;
+}
+
+function formatVisibility(meter) {
+  let result;
+  if (meter >= 10000) {
+    result = 9999;
+  } else if (meter > 5000) {
+    result = Math.floor(meter / 1000) * 1000;
+  } else if (meter > 800) {
+    result = Math.floor(meter / 100) * 100;
+  } else {
+    result = Math.floor(meter / 50) * 50;
+  }
+  return result.toString().padStart(4, '0');
+}
+
+function formatMetarTemp(value) {
+  let rounded;
+
+  if (value >= 0) {
+    // Positif: pembulatan .5 ke atas (ceil jika tepat 0.5)
+    rounded = (value % 1 === 0.5) ? Math.ceil(value) : Math.round(value);
+  } else {
+    // Negatif: pembulatan ke atas = mendekati nol
+    const floor = Math.floor(value);
+    rounded = (value - floor === -0.5) ? floor + 1 : Math.ceil(value);
+  }
+
+  // Format sesuai METAR
+  if (rounded < 0) {
+    return 'M' + String(Math.abs(rounded)).padStart(2, '0');
+  } else {
+    return String(rounded).padStart(2, '0');
+  }
+}
+
+function generateMETAR() {
+  const qualifier = document.getElementById("wxQualifier").value;
+  const descriptor = document.getElementById("wxDescriptor").value;
+  const phenomena = document.getElementById("wxPhenomena").value;
+  const cloudsInput = document.getElementById("clouds").value.trim().toUpperCase();
+
+  let sigWx = `${qualifier}${descriptor}${phenomena}`.trim();
+  if (!qualifier && !descriptor && !phenomena) sigWx = "";
+  // Ambil cuaca yang lalu
+const past1 = document.getElementById("wxPast1").value;
+let pastWeather = "";
+if (past1 && past1 !== "-") {
+  pastWeather = "RE" + past1;
+}
+
+  const clouds = `${sigWx} ${cloudsInput}`.trim();
+  const visibilityRaw = document.getElementById("visibility").value.trim();
+  const visValue = parseInt(visibilityRaw);
+  const visStr = formatVisibility(visValue);
+  const remarks = document.getElementById("remarks").value.trim();
+  const dry = parseFloat(document.getElementById("dry").value);
+  const tDew = document.getElementById("output").innerText.match(/Titik Embun: ([\d\.\-]+)/);
+  const dew = tDew ? parseFloat(tDew[1]) : "";
+  const windDir = parseInt(document.getElementById("windDir").value);
+  const windSpeed = Math.round(parseFloat(document.getElementById("windSpeed").value));
+  const jamInput = parseInt(document.getElementById("jam").value);
+const menitInput = parseInt(document.getElementById("menit").value);
+
+  // Validasi arah angin
+if (isNaN(windDir) || windDir < 0 || windDir > 360) {
+  alert("⚠️ Arah angin harus di antara 0° sampai 360°.");
+  return;
+}
+
+// Validasi kecepatan angin
+if (isNaN(windSpeed) || windSpeed < 0) {
+  alert("⚠️ Kecepatan angin tidak boleh negatif atau kosong.");
+  return;
+}
+
+// Validasi suhu
+if (isNaN(dry)) {
+  alert("⚠️ Suhu bola kering tidak valid.");
+  return;
+}
+
+// Validasi titik embun sudah dihitung
+if (!document.getElementById("output").innerText.includes("Titik Embun")) {
+  alert("⚠️ Silakan klik tombol 'Hitung' terlebih dahulu untuk mendapatkan titik embun.");
+  return;
+}
+const validClouds = /^((FEW|SCT|BKN|OVC|VV)[0-9]{3}(CB|TCU)?|NSC|SKC)(\s+(FEW|SCT|BKN|OVC|VV)[0-9]{3}(CB|TCU)?)*$/;
+if (!validClouds.test(cloudsInput)) {
+  alert("⚠️ Format awan tidak sesuai (contoh: FEW010 SCT020)");
+  return;
+}
+// Validasi jarak pandang
+if (!visibilityRaw || isNaN(visValue) || visValue < 0) {
+  alert("⚠️ Jarak pandang harus berupa angka positif (dalam meter).");
+  return;
+}
+  if (typeof window.qffTerakhir !== 'number') {
+  alert("⚠️ Silakan klik tombol 'Hitung' terlebih dahulu untuk mendapatkan nilai QFF.");
+  return;
+}
+
+// Pembulatan kustom QFF
+const pembulatanQFF = (qff) => {
+  const integer = Math.floor(qff);
+  const desimal = qff - integer;
+  return desimal >= 0.9 ? integer + 1 : integer;
+};
+const qnhStr = `Q${pembulatanQFF(window.qffTerakhir).toString().padStart(4, '0')}`;
+
+  if (!clouds.trim() || isNaN(visValue) || isNaN(dry) || isNaN(dew) || isNaN(windDir) || isNaN(windSpeed)) {
+  alert("Mohon isi semua data dan lakukan perhitungan terlebih dahulu.");
+  return;
+  }
+
+  const time = getUTCMetarTime();
+  document.getElementById("metarTime").innerText = time;
+
+  const tempStr = `${formatMetarTemp(dry)}/${formatMetarTemp(dew)}`;
+  const windStr = windSpeed >= 100
+  ? `${windDir.toString().padStart(3, '0')}P99KT`
+  : `${windDir.toString().padStart(3, '0')}${pad2(windSpeed)}KT`;
+  const metar = `METAR WAEG ${time} ${windStr} ${visStr} ${clouds} ${tempStr} ${qnhStr}${pastWeather ? ' ' + pastWeather : ''}${remarks ? ' ' + remarks : ''}=`;
+
+  const saidCode = `SAID40 WAEG ${time.replace("Z", "")}`;
+  document.getElementById("metarOutput").innerText = `${saidCode}\n${metar}`;
+  window.latestMETAR = metar;
+  // 👇 Tampilkan tombol simpan bawah
+document.getElementById("simpanMetarBawah").style.display = "block";
+document.getElementById("metarOutputWrapper").scrollIntoView({ behavior: "smooth" });
+}
+
+function salinMetar() {
+  const teks = document.getElementById("metarOutput").innerText;
+  if (!teks) {
+    alert("⚠️ Belum ada sandi METAR untuk disalin.");
+    return;
+  }
+
+  navigator.clipboard.writeText(teks)
+    .then(() => {
+      const notif = document.createElement('div');
+      notif.innerText = "✅ Sandi METAR disalin!";
+      Object.assign(notif.style, {
+        position: 'fixed',
+        bottom: '20px',
+        left: '50%',
+        transform: 'translateX(-50%)',
+        background: '#0d47a1',
+        color: 'white',
+        padding: '10px 20px',
+        borderRadius: '6px',
+        fontWeight: 'bold',
+        zIndex: 1000
+      });
+      document.body.appendChild(notif);
+      setTimeout(() => notif.remove(), 2000);
+    })
+    .catch(() => alert("❌ Gagal menyalin ke clipboard."));
+}
+
 </script>
 </head>
 <body>
@@ -158,104 +402,296 @@
         <label for="windSpeed">💨 Kecepatan Angin (knot):</label>
         <input type="number" id="windSpeed" step="0.1" required />
       </div>
-      <button type="submit">🔍 Hitung</button>
+      <button type="button" onclick="calculate()">🔍 Hitung</button>
       <button type="button" onclick="clearForm()">🧹 Clear</button>
       <button type="button" onclick="toggleTable()">📋 Tabel QFF</button>
       <button type="button" onclick="simpan()">💾 Simpan</button>
 	  <button type="button" onclick="kirimWhatsApp()">📲 Kirim WhatsApp</button>
+	  <button type="button" onclick="toggleMetarSection()">📄 METAR</button>
     </form>
 
     <div id="output"></div>
-
-    <div id="qffContainer" style="display:none;">
-      <input type="text" id="searchInput" onkeyup="filterTable()" placeholder="🔎 Cari QFF...">
-      <table id="qffTable">
-        <thead>
-          <tr><th>Tekanan (mb)</th><th>QFF (mb)</th></tr>
-        </thead>
-        <tbody id="qffBody"></tbody>
-      </table>
+	<div id="metarSection" style="margin-top: 20px; display: none;">
+	<!-- Tombol scroll untuk METAR -->
+<button id="scrollTopMetarFloating" onclick="scrollToTop('metar')" 
+   style="display: none; position: fixed; bottom: 80px; right: 20px; 
+         background: none; border: none; 
+         font-size: 2em; cursor: pointer; 
+         z-index: 999;">
+  ⬆️
+</button>
+<button id="scrollTopMetarStatic" onclick="scrollToTop('metar')" 
+  style="margin-bottom: 10px; display: none;">
+  ⬆️ Kembali ke Atas
+</button>
+  <h2>🛰️ METAR</h2>
+  <p><strong>Waktu (UTC):</strong> <span id="metarTime"></span></p>
+  <button type="button" class="collapsible">🌧️ Cuaca</button>
+<div class="collapsible-content">
+  <div class="form-group">
+    <label>🌧️ Cuaca Saat Pengamatan :</label>
+    <div style="display: flex; gap: 5px; flex-wrap: wrap;">
+      <select id="wxQualifier" class="metar-select" style="flex: 1;">
+        <option value="">None</option>
+        <option value="-">- Light</option>
+        <option value="">Moderate</option>
+        <option value="+">+ Heavy</option>
+        <option value="VC">VC (in vicinity)</option>
+      </select>
+      <select id="wxDescriptor" class="metar-select" style="flex: 1;">
+        <option value="">None</option>
+        <option value="MI">MI Shallow</option>
+        <option value="PR">PR Partial</option>
+        <option value="BC">BC Patches</option>
+        <option value="DR">DR Low drifting</option>
+        <option value="BL">BL Blowing</option>
+        <option value="SH">SH Shower</option>
+        <option value="TS">TS Thunderstorm</option>
+        <option value="FZ">FZ Freezing</option>
+      </select>
+      <select id="wxPhenomena" class="metar-select" style="flex: 1;">
+        <option value="">None</option>
+        <option value="RA">RA Rain</option>
+        <option value="DZ">DZ Drizzle</option>
+        <option value="SN">SN Snow</option>
+        <option value="FG">FG Fog</option>
+        <option value="BR">BR Mist</option>
+        <option value="HZ">HZ Haze</option>
+        <option value="SQ">SQ Squalls</option>
+        <option value="FC">FC Funnel Cloud</option>
+        <option value="SS">SS Sandstorm</option>
+        <option value="DS">DS Duststorm</option>
+        <option value="DU">DU Widespread Dust</option>
+        <option value="VA">VA Volcanic Ash</option>
+        <option value="UP">UP Unknown Precipitation</option>
+      </select>
     </div>
+  </div>
+  <div class="form-group">
+    <label>🌩️ Cuaca Yang Lalu :</label>
+    <select id="wxPast1" style="width: 100%; font-size: 1em; padding: 6px;">
+      <option value="">-</option>
+      <option value="RA">RA Rain</option>
+      <option value="DZ">DZ Drizzle</option>
+      <option value="TS">TS Thunderstorm</option>
+      <option value="TSRA">TSRA Thunderstorm With Rain</option>
+      <option value="SN">SN Snow</option>
+      <option value="FG">FG Fog</option>
+      <option value="BR">BR Mist</option>
+      <option value="HZ">HZ Haze</option>
+      <option value="SQ">SQ Squalls</option>
+      <option value="FC">FC Funnel Cloud (tornado/waterspout)</option>
+      <option value="SS">SS Sandstorm</option>
+      <option value="DS">DS Duststorm</option>
+      <option value="DU">DU Widespread Dust</option>
+      <option value="VA">VA Volcanic Ash</option>
+      <option value="GR">GR Hail</option>
+      <option value="PL">PL Ice pellets</option>
+      <option value="GS">GS Small hail/snow pellets</option>
+      <option value="SHRA">SHRA Rain Showers</option>
+      <option value="BLSN">BLSN Blowing Snow</option>
+      <option value="FZDZ">FZDZ Freezing drizzle</option>
+      <option value="FZFG">FZFG Freezing fog</option>
+      <option value="FZRA">FZRA Freezing rain</option>
+    </select>
+  </div>
+</div>
+	<div class="form-group">
+    <label for="clouds">☁️ Awan :</label>
+	<input type="text" id="clouds" placeholder="Contoh: FEW010 SCT018 BKN070">
+  </div>
+  <div class="form-group">
+    <label for="visibility">👁️ Jarak Pandang (meter):</label>
+    <input type="number" id="visibility" placeholder="contoh: 8000">
+  </div>
+  <button type="button" class="collapsible">🕐 Waktu UTC Manual (LEWATI LANGSUNG KLIK BUAT SANDI)</button>
+<div class="collapsible-content">
+  <div class="form-group">
+    <label for="jam">🕐 Jam UTC:</label>
+    <input type="number" id="jam" placeholder="Lewati jika otomatis" min="0" max="23">
+  </div>
+  <div class="form-group">
+    <label for="menit">🕐 Menit UTC:</label>
+    <input type="number" id="menit" placeholder="Lewati jika otomatis" min="0" max="59">
+  </div>
+</div>
+  <div class="form-group">
+    <label for="remarks">📝 Remark (opsional):</label>
+    <input type="text" id="remarks" placeholder="Contoh: QNH1013, No significant change, dll">
+  </div>
+  <button type="button" onclick="generateMETAR()">🧾 Buat Sandi METAR</button>
+  <div id="metarOutputWrapper" style="position: relative; margin-top: 10px;">
+  <button onclick="salinMetar()" 
+    style="position: absolute; top: 6px; right: 6px; background: #eee; border: 1px solid #ccc; padding: 2px 6px; border-radius: 4px; font-size: 0.8em; cursor: pointer;">
+    📋
+  </button>
+  <div id="metarOutput" style="background: #fff3cd; padding: 10px; border-radius: 6px; white-space: pre-wrap;"></div>
+  <!-- Tombol Simpan Baru (sembunyi dulu) -->
+<div id="simpanMetarBawah" style="margin-top: 10px; text-align: right; display: none;">
+  <button type="button" onclick="simpan()">💾 Simpan</button>
+</div>
+</div>
+</div>
+
+    <!-- Tombol scroll untuk QFF -->
+<div id="qffContainer" style="display: none; margin-top: 20px;">
+  <!-- Tombol scroll untuk QFF -->
+  <button id="scrollTopQFFFloating" onclick="scrollToTop('qff')" 
+    style="display: none; position: fixed; bottom: 20px; right: 20px; 
+          background: none; border: none; 
+          font-size: 2em; cursor: pointer; 
+          z-index: 999;">
+    ⬆️
+  </button>
+  <button id="scrollTopQFFStatic" onclick="scrollToTop('qff')" 
+    style="margin-bottom: 10px; display: none;">
+    ⬆️ Kembali ke Atas
+  </button>
+
+  <input type="text" id="searchInput" onkeyup="filterTable()" placeholder="🔎 Cari QFF...">
+  <table id="qffTable">
+    <thead>
+      <tr><th>Tekanan (mb)</th><th>QFF (mb)</th></tr>
+    </thead>
+    <tbody id="qffBody"></tbody>
+  </table>
+</div>
 
     <div class="riwayat">
       <h3>📂 Riwayat Pengamatan</h3>
       <div id="riwayatList"></div>
       <button onclick="hapusRiwayat()">🗑️ Hapus Semua</button>
     </div>
-  </div>
-
+ 
   <script>
     function calculate() {
-      const dry = parseFloat(document.getElementById("dry").value);
-      const wet = parseFloat(document.getElementById("wet").value);
-      const press = parseFloat(document.getElementById("press").value);
-      const windDir = parseInt(document.getElementById("windDir").value);
-      const windSpeed = parseFloat(document.getElementById("windSpeed").value);
-      const elev = 37;
+  const dry = parseFloat(document.getElementById("dry").value);
+  const wet = parseFloat(document.getElementById("wet").value);
+  const press = parseFloat(document.getElementById("press").value);
+  const windDir = parseInt(document.getElementById("windDir").value);
+  const windSpeed = parseFloat(document.getElementById("windSpeed").value);
+  const elev = 37;
 
-      if (isNaN(dry) || isNaN(wet) || isNaN(press) || isNaN(windDir) || isNaN(windSpeed)) {
-        alert("Mohon isi semua kolom dengan benar.");
-        return;
-      }
+  if (isNaN(dry) || isNaN(wet) || isNaN(press) || isNaN(windDir) || isNaN(windSpeed)) {
+    alert("Mohon isi semua kolom dengan benar.");
+    return;
+  }
 
-      const eWet = 6.112 * Math.exp((17.62 * wet) / (243.12 + wet));
-      const eDry = 6.112 * Math.exp((17.62 * dry) / (243.12 + dry));
-      const e = eWet - press * (dry - wet) * 0.00066 * (1 + 0.00115 * wet);
-      const rh = Math.round((e / eDry) * 100);
-      const tDew = (243.12 * Math.log(e / 6.112)) / (17.62 - Math.log(e / 6.112));
+  const eWet = 6.112 * Math.exp((17.62 * wet) / (243.12 + wet));
+  const eDry = 6.112 * Math.exp((17.62 * dry) / (243.12 + dry));
+  const e = eWet - press * (dry - wet) * 0.00066 * (1 + 0.00115 * wet);
+  const rh = Math.round((e / eDry) * 100);
+  const tDew = (243.12 * Math.log(e / 6.112)) / (17.62 - Math.log(e / 6.112));
 
-      const T = dry + 273.15;
-      const QFF = press + (0.12 * elev) + (0.0005 * T);
-      const QFE = press + 0.5;
+  const T = dry + 273.15;
+  const QFF = press + (0.12 * elev) + (0.0005 * T);
+  const QFE = press + 0.5;
 
-      const windDirText = getWindDirection(windDir);
-      const speedKMH = (windSpeed * 1.852).toFixed(1);
+  const windDirText = getWindDirection(windDir);
+  const speedKMH = (windSpeed * 1.852).toFixed(1);
 
-      const now = new Date();
-      const local = now.toLocaleString("sv-SE");
-      const utc = new Date(now.getTime() - (9 * 60 * 60 * 1000)).toLocaleString("sv-SE") + " UTC";
+  const now = new Date();
+  const local = now.toLocaleString("sv-SE");
+  const utc = new Date(now.getTime() - (9 * 60 * 60 * 1000)).toLocaleString("sv-SE") + " UTC";
 
-      const output = `
-        <h2>🕓 Waktu Pengamatan:</h2>
-        <p>Lokal: ${local}<br/>UTC: ${utc}</p>
-        <p>🌡️ Bola Kering: ${dry.toFixed(1)} °C<br/>
-        🌡️ Bola Basah: ${wet.toFixed(1)} °C<br/>
-        🌡️ Titik Embun: ${tDew.toFixed(1)} °C<br/>
-        💧 Kelembapan Relatif: ${rh} %</p>
-        <p>🧭 Tekanan Udara: ${press.toFixed(1)} mb<br/>
-        📈 QFF: ${QFF.toFixed(1)} mb / ${(QFF * 0.02953).toFixed(2)} inchHg<br/>
-        📉 QFE: ${QFE.toFixed(1)} mb / ${(QFE * 0.02953).toFixed(2)} inchHg</p>
-        <p>🌬️ Arah Angin: ${windDir}° (${windDirText})<br/>
-        💨 Kecepatan: ${Math.round(windSpeed)} knot (${speedKMH} km/jam)</p>
-      `;
-      document.getElementById("output").innerHTML = output;
-    }
+  const output = `
+    <h2>🕓 Waktu Pengamatan:</h2>
+    <p>Lokal: ${local}<br/>UTC: ${utc}</p>
+    <p>🌡️ Bola Kering: ${dry.toFixed(1)} °C<br/>
+    🌡️ Bola Basah: ${wet.toFixed(1)} °C<br/>
+    🌡️ Titik Embun: ${tDew.toFixed(1)} °C<br/>
+    💧 Kelembapan Relatif: ${rh} %</p>
+    <p>🧭 Tekanan Udara: ${press.toFixed(1)} mb<br/>
+    📈 QFF: ${QFF.toFixed(1)} mb / ${(QFF * 0.02953).toFixed(2)} inchHg<br/>
+    📉 QFE: ${QFE.toFixed(1)} mb / ${(QFE * 0.02953).toFixed(2)} inchHg</p>
+    <p>🌬️ Arah Angin: ${windDir}° (${windDirText})<br/>
+    💨 Kecepatan: ${Math.round(windSpeed)} knot (${speedKMH} km/jam)</p>
+  `;
+  document.getElementById("output").innerHTML = output;
+  window.qffTerakhir = QFF;  // ✅ Simpan QFF asli ke variabel global
+  document.getElementById("output").scrollIntoView({ behavior: "smooth" });
+
+  // generateMETAR();  // ❌ Jangan panggil otomatis saat hitung
+  document.getElementById("output").scrollIntoView({ behavior: "smooth" });  // ✅ Auto-scroll ke bawah
+}
 
     function simpan() {
-      const data = document.getElementById("output").innerHTML;
-      if (!data) return;
-      let riwayat = JSON.parse(localStorage.getItem("riwayat") || "[]");
-      riwayat.push(data);
-      localStorage.setItem("riwayat", JSON.stringify(riwayat));
-      tampilkanRiwayat();
-    }
-	
-	function kirimWhatsApp() {
-	  const outputText = document.getElementById("output").innerText;
-	  if (!outputText) {
-      alert("Silakan hitung data terlebih dahulu.");
-      return;
-	  }
-	  const pesan = encodeURIComponent(outputText);
-	  const url = `https://wa.me/?text=${pesan}`;
-	  window.open(url, "_blank");
-	}
+  const outputText = document.getElementById("output").innerHTML;
+  const metarText = document.getElementById("metarOutput").innerText;
+  const utcWaktu = document.getElementById("metarTime").innerText || "";
 
+  if (!outputText && !metarText) {
+    alert("⚠️ Tidak ada data pengamatan atau METAR untuk disimpan.");
+    return;
+  }
+
+  const dataGabungan = `
+    <div style="border:1px solid #ddd; padding: 10px; border-radius: 6px; margin-bottom: 10px;">
+      <h4 style="margin-bottom: 8px;">📡 <strong>Pengamatan:</strong></h4>
+      ${outputText}
+      <h4 style="margin-top: 15px; margin-bottom: 6px;">🧾 <strong>METAR:</strong></h4>
+      <pre style="
+        background: #f7f7f7;
+        padding: 10px;
+        border: 1px dashed #aaa;
+        border-radius: 6px;
+        font-family: 'Courier New', Courier, monospace;
+        font-size: 0.95em;
+        white-space: pre-wrap;
+        color: #333;
+      ">${metarText}</pre>
+    </div>
+  `;
+
+  let riwayat = JSON.parse(localStorage.getItem("riwayat") || "[]");
+
+  // Cari entri yang punya waktu UTC sama
+  const index = riwayat.findIndex(item => item.includes(`UTC: ${utcWaktu} UTC`));
+
+  if (index !== -1) {
+    // Update METAR saja
+    riwayat[index] = riwayat[index].replace(
+      /(<h4 style="margin-top: 15px; margin-bottom: 6px;">🧾 <strong>METAR:<\/strong><\/h4>)([\s\S]*?<pre[\s\S]*?>)[\s\S]*?<\/pre>/,
+      `$1$2${metarText}</pre>`
+    );
+  } else {
+    // Tambah baru jika tidak ditemukan
+    riwayat.push(dataGabungan);
+  }
+
+  localStorage.setItem("riwayat", JSON.stringify(riwayat));
+  tampilkanRiwayat();
+}
+
+	function kirimWhatsApp() {
+  const outputText = document.getElementById("output").innerText;
+  const metarText = document.getElementById("metarOutput").innerText;
+
+  if (!outputText && !metarText) {
+    alert("Silakan hitung dan buat sandi METAR terlebih dahulu.");
+    return;
+  }
+
+  const pesan = encodeURIComponent(
+    `📡 *Pengamatan Cuaca:*\n${outputText}\n\n🧾 *Sandi METAR:*\n${metarText}`
+  );
+
+  const url = `https://wa.me/?text=${pesan}`;
+  window.open(url, "_blank");
+}
 
     function tampilkanRiwayat() {
-      let riwayat = JSON.parse(localStorage.getItem("riwayat") || "[]");
-      document.getElementById("riwayatList").innerHTML = riwayat.map(item => `<div style="border-bottom:1px solid #ccc;margin-bottom:10px;">${item}</div>`).join("");
-    }
+  let riwayat = JSON.parse(localStorage.getItem("riwayat") || "[]");
+  const container = document.getElementById("riwayatList");
+  container.innerHTML = "";
+
+  riwayat.forEach((item, index) => {
+    const wrapper = document.createElement("div");
+    wrapper.innerHTML = item;
+    wrapper.style.marginBottom = "20px";
+    container.appendChild(wrapper);
+  });
+}
 
     function hapusRiwayat() {
       if (confirm("Hapus semua riwayat pengamatan?")) {
@@ -265,9 +701,27 @@
     }
 
     function clearForm() {
-      document.getElementById("form").reset();
-      document.getElementById("output").innerHTML = "";
-    }
+  document.getElementById("form").reset();
+  document.getElementById("output").innerHTML = "";
+  document.getElementById("metarOutput").innerText = "";
+  document.getElementById("metarTime").innerText = "";
+  window.qffTerakhir = undefined;
+
+  // 🔄 Reset semua input METAR manual
+  const fieldsToClear = [
+    "wxQualifier", "wxDescriptor", "wxPhenomena",
+    "wxPast1", "clouds", "visibility",
+    "jam", "menit", "remarks"
+  ];
+  fieldsToClear.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = "";
+  });
+
+  // ❌ Sembunyikan tombol simpan bawah jika ada
+  const simpanBtn = document.getElementById("simpanMetarBawah");
+  if (simpanBtn) simpanBtn.style.display = "none";
+}
 
     function getWindDirection(deg) {
       const directions = ["Utara", "Timur Laut", "Timur", "Tenggara", "Selatan", "Barat Daya", "Barat", "Barat Laut"];
@@ -275,10 +729,60 @@
       return directions[i];
     }
 
-    function toggleTable() {
-      const container = document.getElementById("qffContainer");
-      container.style.display = container.style.display === "none" ? "block" : "none";
+   function toggleTable() {
+  const container = document.getElementById("qffContainer");
+  const show = container.style.display === "none" || container.style.display === "";
+  container.style.display = show ? "block" : "none";
+  document.getElementById("scrollTopQFFFloating").style.display = show ? "inline-block" : "none";
+  document.getElementById("scrollTopQFFStatic").style.display = show ? "inline-block" : "none";
+
+  if (show) {
+    setTimeout(() => {
+      container.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 100);
+  }
+}
+
+   function scrollToTop(section) {
+  window.scrollTo({ top: 0, behavior: "smooth" });
+
+  setTimeout(() => {
+    if (section === 'qff') {
+      const qff = document.getElementById("qffContainer");
+      const btnFloat = document.getElementById("scrollTopQFFFloating");
+      const btnStatic = document.getElementById("scrollTopQFFStatic");
+      qff.style.display = "none";
+      btnFloat.style.display = "none";
+      btnStatic.style.display = "none";
+    } else if (section === 'metar') {
+      const metarSection = document.getElementById("metarSection");
+      const btnFloat = document.getElementById("scrollTopMetarFloating");
+      const btnStatic = document.getElementById("scrollTopMetarStatic");
+      metarSection.style.display = "none";
+      btnFloat.style.display = "none";
+      btnStatic.style.display = "none";
     }
+  }, 500);
+}
+
+    function toggleMetarSection() {
+  const section = document.getElementById("metarSection");
+  const isHidden = section.style.display === "none" || section.style.display === "";
+
+  section.style.display = isHidden ? "block" : "none";
+
+  if (isHidden) {
+    section.scrollIntoView({ behavior: "smooth" });
+
+    // ✅ Tampilkan tombol scroll ke atas juga
+    document.getElementById("scrollTopMetarFloating").style.display = "inline-block";
+document.getElementById("scrollTopMetarStatic").style.display = "inline-block";
+  } else {
+    // ❌ Jika disembunyikan, tombol scroll juga disembunyikan
+document.getElementById("scrollTopMetarFloating").style.display = "none";
+document.getElementById("scrollTopMetarStatic").style.display = "none";
+  }
+}
 
     function filterTable() {
       const input = document.getElementById("searchInput").value.toUpperCase();
@@ -306,5 +810,24 @@
       calculate();
     });
   </script>
+  <script>
+  // Collapsible untuk bagian cuaca
+  document.addEventListener("DOMContentLoaded", function () {
+    const collapsibles = document.querySelectorAll(".collapsible");
+    collapsibles.forEach(btn => {
+      btn.addEventListener("click", function () {
+        this.classList.toggle("active");
+        const content = this.nextElementSibling;
+        if (content.style.display === "block") {
+          content.style.display = "none";
+        } else {
+          content.style.display = "block";
+        }
+      });
+    });
+  });
+  
+</script>
+
 </body>
 </html>
