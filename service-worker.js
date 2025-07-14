@@ -1,4 +1,4 @@
-const CACHE_NAME = 'metaryx-cache-v2'; // ⚠️ Ganti versi jika ada perubahan
+const CACHE_NAME = 'metaryx-cache-v3'; // ⚠️ Ganti versi jika ada perubahan
 const OFFLINE_URL = '/meteofis/index.html';
 
 const urlsToCache = [
