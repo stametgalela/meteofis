@@ -125,6 +125,16 @@
   margin-bottom: 10px;
   border-radius: 6px;
 }
+button.active-tab {
+  background: #0d47a1;
+  color: white;
+  border-radius: 6px;
+}
+.active-tab {
+  background-color: #0d47a1;
+  color: white;
+  border-radius: 6px;
+}
     .riwayat {
       background: #f9f9f9;
       border: 1px solid #ddd;
@@ -408,6 +418,8 @@ function salinMetar() {
       <button type="button" onclick="simpan()">💾 Simpan</button>
 	  <button type="button" onclick="kirimWhatsApp()">📲 Kirim WhatsApp</button>
 	  <button type="button" onclick="toggleMetarSection()">📄 METAR</button>
+	  <button type="button" onclick="toggleSpeciSection()">📑 SPECi</button>
+	  <button type="button" onclick="toggleRiwayat()">📂 Tampilkan Riwayat</button>
     </form>
 
     <div id="output"></div>
@@ -533,6 +545,102 @@ function salinMetar() {
 </div>
 </div>
 
+<div id="speciSection" style="margin-top: 20px; display: none;">
+  <button id="scrollTopSpeciFloating" onclick="scrollToTop('speci')" 
+    style="display: none; position: fixed; bottom: 140px; right: 20px; 
+          background: none; border: none; 
+          font-size: 2em; cursor: pointer; 
+          z-index: 999;">
+    ⬆️
+  </button>
+  <button id="scrollTopSpeciStatic" onclick="scrollToTop('speci')" 
+    style="margin-bottom: 10px; display: none;">
+    ⬆️ Kembali ke Atas
+  </button>
+  <h2>📑 SPECi</h2>
+  <div class="form-group">
+    <label>🌧️ Cuaca Saat Pengamatan:</label>
+    <div style="display: flex; gap: 5px; flex-wrap: wrap;">
+      <select id="speciQualifier" style="flex: 1;">
+        <option value="">None</option>
+        <option value="-">- Light</option>
+        <option value="">Moderate</option>
+        <option value="+">+ Heavy</option>
+        <option value="VC">VC</option>
+      </select>
+      <select id="speciDescriptor" style="flex: 1;">
+        <option value="">None</option>
+        <option value="TS">TS</option>
+        <option value="SH">SH</option>
+        <option value="FZ">FZ</option>
+        <option value="BL">BL</option>
+      </select>
+      <select id="speciPhenomena" style="flex: 1;">
+        <option value="">None</option>
+        <option value="RA">RA</option>
+        <option value="SN">SN</option>
+        <option value="FG">FG</option>
+        <option value="BR">BR</option>
+      </select>
+    </div>
+	</div>
+	<div class="form-group">
+	<label>⛈️ Cuaca Yang Lalu :</label>
+	<select id="speciPastWx" style="width: 100%; font-size: 1em; padding: 6px;">
+    <option value="">-</option>
+    <option value="RA">RA Rain</option>
+    <option value="DZ">DZ Drizzle</option>
+    <option value="TS">TS Thunderstorm</option>
+    <option value="TSRA">TSRA Thunderstorm With Rain</option>
+    <option value="SN">SN Snow</option>
+    <option value="FG">FG Fog</option>
+    <option value="BR">BR Mist</option>
+    <option value="HZ">HZ Haze</option>
+    <option value="SQ">SQ Squalls</option>
+    <option value="FC">FC Funnel Cloud</option>
+    <option value="SS">SS Sandstorm</option>
+    <option value="DS">DS Duststorm</option>
+    <option value="DU">DU Widespread Dust</option>
+    <option value="VA">VA Volcanic Ash</option>
+    <option value="GR">GR Hail</option>
+    <option value="PL">PL Ice pellets</option>
+    <option value="GS">GS Small hail/snow pellets</option>
+    <option value="SHRA">SHRA Rain Showers</option>
+    <option value="BLSN">BLSN Blowing Snow</option>
+    <option value="FZDZ">FZDZ Freezing drizzle</option>
+    <option value="FZFG">FZFG Freezing fog</option>
+    <option value="FZRA">FZRA Freezing rain</option>
+	</select>
+	</div>
+  <div class="form-group">
+    <label for="speciClouds">☁️ Awan :</label>
+    <input type="text" id="speciClouds" placeholder="Contoh: FEW010 BKN020 CB">
+  </div>
+  <div class="form-group">
+    <label for="speciVis">👁️ Jarak Pandang (meter):</label>
+    <input type="number" id="speciVis" placeholder="contoh: 6000">
+  </div>
+  <div class="form-group">
+    <label for="speciJam">🕐 Jam UTC:</label>
+    <input type="number" id="speciJam" placeholder="0-23" min="0" max="23">
+  </div>
+  <div class="form-group">
+    <label for="speciMenit">🕐 Menit UTC:</label>
+    <input type="number" id="speciMenit" placeholder="0-59" min="0" max="59">
+  </div>
+  <button type="button" onclick="generateSPECi()">📑 Buat SPECi</button>
+  <div id="speciOutputWrapper" style="position: relative; margin-top: 10px;">
+    <button onclick="salinSpeci()" 
+      style="position: absolute; top: 6px; right: 6px; background: #eee; border: 1px solid #ccc; padding: 2px 6px; border-radius: 4px; font-size: 0.8em; cursor: pointer;">
+      📋
+    </button>
+    <div id="speciOutput" style="background: #e1f5fe; padding: 10px; border-radius: 6px; white-space: pre-wrap;"></div>
+	<div id="simpanSpeciBawah" style="margin-top: 10px; text-align: right;">
+  <button type="button" onclick="simpanSpeci()">💾 Simpan SPECi</button>
+	</div>
+  </div>
+</div>
+
     <!-- Tombol scroll untuk QFF -->
 <div id="qffContainer" style="display: none; margin-top: 20px;">
   <!-- Tombol scroll untuk QFF -->
@@ -557,11 +665,19 @@ function salinMetar() {
   </table>
 </div>
 
-    <div class="riwayat">
-      <h3>📂 Riwayat Pengamatan</h3>
-      <div id="riwayatList"></div>
-      <button onclick="hapusRiwayat()">🗑️ Hapus Semua</button>
-    </div>
+    <div class="riwayat" id="riwayatWrapper" style="display: none;">
+  <!-- Tombol Tab Tetap Terlihat -->
+  <div id="tabContainer" style="display: flex; gap: 10px; margin-bottom: 10px;">
+    <button onclick="showTab('metar')" id="tabMetar" style="flex: 1;">🧾 Riwayat METAR</button>
+    <button onclick="showTab('speci')" id="tabSpeci" style="flex: 1;">📑 Riwayat SPECi</button>
+  </div>
+
+  <!-- Konten Tab -->
+  <div id="riwayatMetarList" style="display: none;"></div>
+  <div id="riwayatSpeciList" style="display: none;"></div>
+
+  <button onclick="hapusRiwayat()" style="margin-top: 10px;">🗑️ Hapus Semua</button>
+</div>
  
   <script>
     function calculate() {
@@ -663,6 +779,49 @@ function salinMetar() {
   tampilkanRiwayat();
 }
 
+function simpanSpeci() {
+  const outputText = document.getElementById("output").innerHTML;
+  const speciText = document.getElementById("speciOutput").innerText;
+  const utcMatch = speciText.match(/SPECI WAEG (\d{6})Z/);
+  const utcWaktu = utcMatch ? utcMatch[1] : "";
+
+  if (!outputText && !speciText) {
+    alert("⚠️ Tidak ada data pengamatan atau SPECi untuk disimpan.");
+    return;
+  }
+
+  const dataGabungan = `
+    <div style="border:1px solid #ddd; padding: 10px; border-radius: 6px; margin-bottom: 10px;">
+      <h4 style="margin-bottom: 8px;">📡 <strong>Pengamatan:</strong></h4>
+      ${outputText}
+      <h4 style="margin-top: 15px; margin-bottom: 6px;">📑 <strong>SPECi:</strong></h4>
+      <pre style="
+        background: #e8f5e9;
+        padding: 10px;
+        border: 1px dashed #4caf50;
+        border-radius: 6px;
+        font-family: 'Courier New', Courier, monospace;
+        font-size: 0.95em;
+        white-space: pre-wrap;
+        color: #333;
+      ">${speciText}</pre>
+    </div>
+  `;
+
+  let riwayat = JSON.parse(localStorage.getItem("riwayat") || "[]");
+
+  // Cek apakah SPECi sudah pernah disimpan berdasarkan waktu UTC
+  const index = riwayat.findIndex(item => item.includes(`SPECI WAEG ${utcWaktu}Z`));
+  if (index !== -1) {
+    riwayat[index] = dataGabungan;  // Gantikan
+  } else {
+    riwayat.push(dataGabungan);     // Tambah baru
+  }
+
+  localStorage.setItem("riwayat", JSON.stringify(riwayat));
+  tampilkanRiwayat();
+}
+
 	function kirimWhatsApp() {
   const outputText = document.getElementById("output").innerText;
   const metarText = document.getElementById("metarOutput").innerText;
@@ -680,16 +839,62 @@ function salinMetar() {
   window.open(url, "_blank");
 }
 
+function showTab(tab) {
+  const metarDiv = document.getElementById("riwayatMetarList");
+  const speciDiv = document.getElementById("riwayatSpeciList");
+  const tabMetar = document.getElementById("tabMetar");
+  const tabSpeci = document.getElementById("tabSpeci");
+
+  if (tab === "metar") {
+    metarDiv.style.display = "block";
+    speciDiv.style.display = "none";
+    tabMetar.classList.add("active-tab");
+    tabSpeci.classList.remove("active-tab");
+  } else if (tab === "speci") {
+    metarDiv.style.display = "none";
+    speciDiv.style.display = "block";
+    tabSpeci.classList.add("active-tab");
+    tabMetar.classList.remove("active-tab");
+  }
+}
+
+function toggleRiwayat() {
+  const wrapper = document.getElementById("riwayatWrapper");
+  const metarDiv = document.getElementById("riwayatMetarList");
+  const speciDiv = document.getElementById("riwayatSpeciList");
+  const tabMetar = document.getElementById("tabMetar");
+  const tabSpeci = document.getElementById("tabSpeci");
+
+  if (wrapper.style.display === "none") {
+    wrapper.style.display = "block";
+    // Tetap tidak mengaktifkan tab apa pun dulu
+    wrapper.scrollIntoView({ behavior: "smooth" });
+  } else {
+    wrapper.style.display = "none";
+    metarDiv.style.display = "none";
+    speciDiv.style.display = "none";
+    tabMetar.classList.remove("active-tab");
+    tabSpeci.classList.remove("active-tab");
+  }
+}
+
     function tampilkanRiwayat() {
   let riwayat = JSON.parse(localStorage.getItem("riwayat") || "[]");
-  const container = document.getElementById("riwayatList");
-  container.innerHTML = "";
+  const metarContainer = document.getElementById("riwayatMetarList");
+  const speciContainer = document.getElementById("riwayatSpeciList");
+  metarContainer.innerHTML = "";
+  speciContainer.innerHTML = "";
 
-  riwayat.forEach((item, index) => {
+  riwayat.forEach((item) => {
     const wrapper = document.createElement("div");
     wrapper.innerHTML = item;
     wrapper.style.marginBottom = "20px";
-    container.appendChild(wrapper);
+
+    if (item.includes("🧾 <strong>METAR:")) {
+      metarContainer.appendChild(wrapper);
+    } else if (item.includes("📑 <strong>SPECi:")) {
+      speciContainer.appendChild(wrapper);
+    }
   });
 }
 
@@ -762,6 +967,14 @@ function salinMetar() {
       btnFloat.style.display = "none";
       btnStatic.style.display = "none";
     }
+	  else if (section === 'speci') {
+	  const speciSection = document.getElementById("speciSection");
+      const btnFloat = document.getElementById("scrollTopSpeciFloating");
+	  const btnStatic = document.getElementById("scrollTopSpeciStatic");
+	  speciSection.style.display = "none";
+	  btnFloat.style.display = "none";
+	btnStatic.style.display = "none";
+	}
   }, 500);
 }
 
@@ -784,6 +997,108 @@ document.getElementById("scrollTopMetarStatic").style.display = "none";
   }
 }
 
+function toggleSpeciSection() {
+  const section = document.getElementById("speciSection");
+  const isHidden = section.style.display === "none" || section.style.display === "";
+
+  section.style.display = isHidden ? "block" : "none";
+  document.getElementById("scrollTopSpeciFloating").style.display = isHidden ? "inline-block" : "none";
+  document.getElementById("scrollTopSpeciStatic").style.display = isHidden ? "inline-block" : "none";
+
+  if (isHidden) section.scrollIntoView({ behavior: "smooth" });
+}
+
+function generateSPECi() {
+  const qualifier = document.getElementById("speciQualifier").value;
+  const descriptor = document.getElementById("speciDescriptor").value;
+  const phenomena = document.getElementById("speciPhenomena").value;
+  const clouds = document.getElementById("speciClouds").value.trim().toUpperCase();
+  const vis = parseInt(document.getElementById("speciVis").value);
+  const jam = parseInt(document.getElementById("speciJam").value);
+  const menit = parseInt(document.getElementById("speciMenit").value);
+
+  if (isNaN(vis) || vis < 0 || !clouds) {
+    alert("Mohon isi awan dan visibilitas dengan benar.");
+    return;
+  }
+
+  if (isNaN(jam) || isNaN(menit) || jam < 0 || jam > 23 || menit < 0 || menit > 59) {
+    alert("Jam dan menit UTC tidak valid.");
+    return;
+  }
+
+  // Ambil data dari hasil pengamatan
+  const windDir = parseInt(document.getElementById("windDir").value);
+  const windSpeed = Math.round(parseFloat(document.getElementById("windSpeed").value));
+  const outputText = document.getElementById("output").innerText;
+  const tDewMatch = outputText.match(/Titik Embun: ([\d\.\-]+)/);
+  const tempMatch = outputText.match(/Bola Kering: ([\d\.\-]+)/);
+  const qff = window.qffTerakhir;
+
+  if (isNaN(windDir) || isNaN(windSpeed) || !tDewMatch || !tempMatch || typeof qff !== 'number') {
+    alert("⚠️ Data pengamatan belum lengkap. Harap klik 'Hitung' terlebih dahulu.");
+    return;
+  }
+
+  const dew = parseFloat(tDewMatch[1]);
+  const dry = parseFloat(tempMatch[1]);
+
+  const windStr = windSpeed >= 100
+    ? `${windDir.toString().padStart(3, '0')}P99KT`
+    : `${windDir.toString().padStart(3, '0')}${String(windSpeed).padStart(2, '0')}KT`;
+
+  const tempStr = `${formatMetarTemp(dry)}/${formatMetarTemp(dew)}`;
+
+  // Pembulatan QFF ke format METAR
+  const pembulatanQFF = (qff) => {
+    const integer = Math.floor(qff);
+    const desimal = qff - integer;
+    return desimal >= 0.9 ? integer + 1 : integer;
+  };
+  const qnhStr = `Q${pembulatanQFF(qff).toString().padStart(4, '0')}`;
+
+	const now = new Date();
+	const timeStr = `${pad2(now.getUTCDate())}${pad2(jam)}${pad2(menit)}Z`;
+	const saidCode = `SPID40 WAEG ${timeStr.replace("Z", "")}`;
+	const wx = `${qualifier}${descriptor}${phenomena}`.trim();
+	const pastWxCode = document.getElementById("speciPastWx").value;
+	const pastWxStr = pastWxCode ? ` RE${pastWxCode}` : "";
+
+	const spe = `SPECI WAEG ${timeStr} ${windStr} ${formatVisibility(vis)} ${wx} ${clouds} ${tempStr} ${qnhStr}${pastWxStr}=`.replace(/\s+/g, ' ').trim();
+
+  document.getElementById("speciOutput").innerText = `${saidCode}\n${spe}`;
+  document.getElementById("speciOutputWrapper").scrollIntoView({ behavior: "smooth" });
+}
+
+function salinSpeci() {
+  const teks = document.getElementById("speciOutput").innerText;
+  if (!teks) {
+    alert("⚠️ Belum ada sandi SPECi untuk disalin.");
+    return;
+  }
+
+  navigator.clipboard.writeText(teks)
+    .then(() => {
+      const notif = document.createElement('div');
+      notif.innerText = "✅ Sandi SPECi disalin!";
+      Object.assign(notif.style, {
+        position: 'fixed',
+        bottom: '20px',
+        left: '50%',
+        transform: 'translateX(-50%)',
+        background: '#0d47a1',
+        color: 'white',
+        padding: '10px 20px',
+        borderRadius: '6px',
+        fontWeight: 'bold',
+        zIndex: 1000
+      });
+      document.body.appendChild(notif);
+      setTimeout(() => notif.remove(), 2000);
+    })
+    .catch(() => alert("❌ Gagal menyalin ke clipboard."));
+}
+
     function filterTable() {
       const input = document.getElementById("searchInput").value.toUpperCase();
       const tr = document.querySelectorAll("#qffTable tbody tr");
@@ -802,6 +1117,7 @@ document.getElementById("scrollTopMetarStatic").style.display = "none";
         const qff = p + (0.12 * elev) + (0.0005 * T);
         const row = `<tr><td>${p.toFixed(1)}</td><td>${qff.toFixed(1)}</td></tr>`;
         tbody.insertAdjacentHTML("beforeend", row);
+		showTab('metar');
       }
     };
 
@@ -809,6 +1125,24 @@ document.getElementById("scrollTopMetarStatic").style.display = "none";
       e.preventDefault();
       calculate();
     });
+	function showTab(tab) {
+  const metarDiv = document.getElementById("riwayatMetarList");
+  const speciDiv = document.getElementById("riwayatSpeciList");
+  const tabMetar = document.getElementById("tabMetar");
+  const tabSpeci = document.getElementById("tabSpeci");
+
+  if (tab === "metar") {
+    metarDiv.style.display = "block";
+    speciDiv.style.display = "none";
+    tabMetar.classList.add("active-tab");
+    tabSpeci.classList.remove("active-tab");
+  } else {
+    metarDiv.style.display = "none";
+    speciDiv.style.display = "block";
+    tabSpeci.classList.add("active-tab");
+    tabMetar.classList.remove("active-tab");
+  }
+}
   </script>
   <script>
   // Collapsible untuk bagian cuaca
